@@ -1,116 +1,71 @@
-import os
-import sys
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
-EMOTION_MODEL_PATH = "emotion_model.h5"
-EMOTION_LABELS = [
-    "Angry",
-    "Disgust",
-    "Fear",
-    "Happy",
-    "Sad",
-    "Surprise",
-    "Neutral",
-]
-
-FACE_CASCADE_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-
-
-def load_face_detector():
-    if not os.path.exists(FACE_CASCADE_PATH):
-        raise FileNotFoundError(f"Haar cascade XML not found: {FACE_CASCADE_PATH}")
-    return cv2.CascadeClassifier(FACE_CASCADE_PATH)
-
-
-def load_emotion_model(model_path: str):
-    if not os.path.exists(model_path):
-        print(f"Model file not found: {model_path}")
-        print("Please download or create a compatible Keras model and place it in this folder.")
-        print("Example filename: emotion_model.h5")
-        sys.exit(1)
-    return load_model(model_path, compile=False)
-
+EMOTION_LABELS = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
 
 def preprocess_face(face_gray):
-    face_resized = cv2.resize(face_gray, (64, 64), interpolation=cv2.INTER_AREA)
+    size = 64 
+    
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    face_gray = clahe.apply(face_gray)
+    
+    face_resized = cv2.resize(face_gray, (size, size), interpolation=cv2.INTER_CUBIC)
+    
     face_normalized = face_resized.astype("float32") / 255.0
-    face_expanded = np.expand_dims(face_normalized, axis=-1)
-    face_batch = np.expand_dims(face_expanded, axis=0)
-    return face_batch
-
-
-def annotate_frame(frame, x, y, w, h, label_text, confidence):
-    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    # Label background
-    label = f"{label_text}: {confidence:.2f}"
-    label_bg_color = (0, 255, 0)
-    label_text_color = (0, 0, 0)
-    text_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
-    rectangle_btm_right = (x + text_size[0] + 10, y - 10 if y - 10 > 20 else y + h + 25)
-    rectangle_top_left = (x, y - 25 if y - 25 > 0 else y + h + 5)
-    cv2.rectangle(frame, rectangle_top_left, rectangle_btm_right, label_bg_color, cv2.FILLED)
-    cv2.putText(
-        frame,
-        label,
-        (rectangle_top_left[0] + 5, rectangle_top_left[1] + text_size[1] + 3),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
-        label_text_color,
-        1,
-        cv2.LINE_AA,
-    )
-
+    
+    return np.expand_dims(np.expand_dims(face_normalized, axis=-1), axis=0)
 
 def main():
-    face_detector = load_face_detector()
-    emotion_model = load_emotion_model(EMOTION_MODEL_PATH)
-
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    if not cap.isOpened():
-        print("Error: Cannot open webcam.")
+    try:
+        model = load_model("emotion_model.h5", compile=False)
+    except Exception as e:
+        print(f"Error: {e}")
         return
 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    cap = cv2.VideoCapture(0)
 
-    print("Starting real-time emotion detection. Press 'q' or ESC to exit.")
+    results_buffer = []
 
     while True:
         ret, frame = cap.read()
-        if not ret:
-            print("Error: Failed to capture frame from webcam.")
-            break
-
+        if not ret: break
+        
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_detector.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(60, 60),
-            flags=cv2.CASCADE_SCALE_IMAGE,
-        )
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
         for (x, y, w, h) in faces:
-            face_gray = gray[y : y + h, x : x + w]
-            face_input = preprocess_face(face_gray)
-            predictions = emotion_model.predict(face_input, verbose=0)[0]
-            max_index = int(np.argmax(predictions))
-            confidence = float(predictions[max_index])
-            emotion_label = EMOTION_LABELS[max_index]
-            annotate_frame(frame, x, y, w, h, emotion_label, confidence)
+            face_img = gray[y:y+h, x:x+w]
+            processed = preprocess_face(face_img)
+            
+            # Get prediction
+            preds = model.predict(processed, verbose=0)[0]
 
-        cv2.imshow("Emotion Detection", frame)
+            preds[6] *= 0.5 
+            
+            # Add to buffer and average
+            results_buffer.append(preds)
+            if len(results_buffer) > 10:
+                results_buffer.pop(0)
+            
+            avg_preds = np.mean(results_buffer, axis=0)
+            
+            idx = np.argmax(avg_preds)
+            confidence = avg_preds[idx]
+            
+            # Display
+            label = f"{EMOTION_LABELS[idx]}: {confidence*100:.1f}%"
+            color = (0, 255, 0) # Green
+            
+            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+            cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q") or key == 27:
-            break
+        cv2.imshow("Emotion AI - Stabilized", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'): break
 
     cap.release()
     cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     main()
