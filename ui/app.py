@@ -48,7 +48,7 @@ EMOTION_GLOW = {
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
-    page_title="Emotion Detector",
+    page_title="Emotion Detector!!",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed",
