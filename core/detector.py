@@ -1,3 +1,5 @@
+# Emotion Detection using Deep Learning
+# This file handles real-time emotion detection using DeepFace and OpenCV
 import cv2
 import numpy as np
 from deepface import DeepFace
@@ -12,17 +14,20 @@ frame_count = 0
 
 emotion_history = []
 
+# Processes each video frame and detects dominant emotion
 def process_frame(frame):
     global last_emotion, last_confidence, frame_count, emotion_history
 
     frame_count += 1
+    print("Processing new frame...")
 
     frame_small = cv2.resize(frame, (320, 240))
     gray = cv2.cvtColor(frame_small, cv2.COLOR_BGR2GRAY)
-
+    # Detect faces in grayscale frame
     faces = face_cascade.detectMultiScale(gray, 1.2, 5)
 
     if len(faces) == 0:
+        print("No face detected")
         return frame_small
 
     (x, y, w, h) = max(faces, key=lambda f: f[2]*f[3])
@@ -50,6 +55,7 @@ def process_frame(frame):
 
     if len(emotion_history) == 0:
         return frame_small
+    # Calculate average emotions over last few frames for stability
     avg_emotions = {}
 
     for key in emotion_history[0].keys():
@@ -71,5 +77,5 @@ def process_frame(frame):
             (0,255,0),
             2
         )
-
+    print(f"Detected emotion: {last_emotion} with confidence {last_confidence}")
     return frame_small
