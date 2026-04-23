@@ -6,6 +6,7 @@ import time
 import numpy as np
 import plotly.graph_objects as go
 
+
 # ================= FIX IMPORT PATH =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
@@ -47,7 +48,7 @@ EMOTION_GLOW = {
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
-    page_title="Emotion Detector",
+    page_title="Emotion Detector!!",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed",
