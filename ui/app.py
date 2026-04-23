@@ -244,7 +244,7 @@ st.markdown("""
 <div class="banner">
   <div class="banner-icon-wrap">🧠</div>
   <div>
-    <div class="banner-title">Emotion Detector</div>
+    <div class="banner-title">Emotion Detector!!</div>
     <div class="banner-sub">Hybrid Model · Real-Time · Computer Vision</div>
   </div>
   <div class="banner-badge">⚡ Live Analysis</div>

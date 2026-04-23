@@ -1,0 +1,55 @@
+EMOTION DETECTOR — Real-Time Facial Emotion Recognition
+========================================================
+
+WHAT IT DOES
+  A webcam-based app that detects and displays human emotions in real time.
+  It identifies 7 emotions — Happy, Sad, Angry, Surprised, Fearful,
+  Disgusted, and Neutral — with confidence scores, live charts, and FPS
+  metrics, all inside a dark-mode browser dashboard.
+
+HOW THE PIPELINE WORKS
+  1. Frame Capture    : OpenCV reads webcam frames, resized to 320×240
+                        for faster processing without losing accuracy.
+  2. Face Detection   : OpenCV's Haar Cascade finds faces in each frame.
+                        If multiple faces appear, the largest one is used.
+  3. Frame Skipping   : DeepFace inference runs every 4th frame only,
+                        keeping UI smooth (~30 FPS) while AI runs at ~7-8/sec.
+  4. Emotion Analysis : DeepFace analyzes the cropped face and returns
+                        probability scores for all 7 emotions at once.
+  5. Smoothing Buffer : Last 5 predictions are averaged to prevent
+                        flickering — making the emotion label stable.
+  6. Confidence Boost : "Angry" (+20%) and "Surprise" (+15%) are slightly
+                        amplified to correct for model underestimation.
+  7. Annotation       : A green box and emotion label are drawn on the
+                        frame; labels below 25% confidence are suppressed.
+
+THE DASHBOARD (UI)
+  Left Panel  — Live camera feed with face bounding box and emotion label.
+                Toggle switch to start/stop the camera. Live/Idle indicator.
+  Right Panel — Dominant emotion shown large with emoji + confidence badge.
+                Three metric cards: FPS, Confidence %, Frames processed.
+                Horizontal Plotly bar chart showing all 7 emotion scores.
+  Design      — Deep dark mode, glassmorphism cards, glowing gradients,
+                Space Mono font for numbers, Inter for body text.
+
+PROJECT STRUCTURE
+  core/detector.py   — Face detection + DeepFace analysis logic (the brain)
+  ui/app.py          — Streamlit UI, camera loop, charts, and all styling
+  emotion_model.h5   — Pre-trained Keras/TensorFlow model weights
+  requirements.txt   — All Python dependencies
+
+TECH STACK
+  Python, Streamlit, OpenCV, DeepFace, TensorFlow 2.12, Keras 2.12,
+  Plotly, NumPy, Pillow, MTCNN, RetinaFace, Pandas
+
+HOW TO RUN
+  pip install -r requirements.txt
+  streamlit run ui/app.py
+  → Toggle "▶ Start Camera" in the browser to begin detection.
+
+FUTURE IDEAS
+  - Wire real model scores into the bar chart (currently a stub placeholder).
+  - Multi-face support — detect emotions for more than one person.
+  - Session logging — export emotion timeline as CSV or PDF.
+  - File upload mode — analyze emotions in images or recorded video.
+========================================================
