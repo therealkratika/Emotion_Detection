@@ -76,5 +76,5 @@ def process_frame(frame):
             (0,255,0),
             2
         )
-
+    print(f"Detected emotion: {last_emotion} with confidence {last_confidence}")
     return frame_small
